@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<%- include('partials/head') %>
+</head>
+<body>
+<div class="side">
+
+    <div class="topplinje">
+        <div class="topp"><span class="cue-light"></span><h1><%= config.siteNavn %></h1></div>
+        <a href="/logout" class="knapp liten faresone">Logg ut</a>
+    </div>
+    <p class="undertekst"><%= config.siteUndertekst %></p>
+    <% if (session.innloggetEpost) { %>
+        <p class="innlogget-som">Logget inn som <%= session.innloggetNavn || session.innloggetEpost %> (<%= session.innloggetEpost %>)</p>
+    <% } %>
+
+    <div class="kort">
+        <h2>Abonner på alle møter</h2>
+        <p class="forklaring">Får du med bemanning for alle datoer, uansett rolle. Fungerer i Google Kalender, Apple Kalender, Outlook og de fleste andre kalender-apper.</p>
+        <% const alleHttps = baseUrl + '/feed.ics?type=alle&nokkel=' + encodeURIComponent(feedNokkel); %>
+        <% const alleWebcal = alleHttps.replace(/^https?:\/\//, 'webcal://'); %>
+        <a href="<%= alleWebcal %>" class="knapp lampe utvidet">Abonner på alle møter</a>
+        <div class="lenke-boks">
+            <input type="text" readonly value="<%= alleHttps %>" id="lenke-alle">
+            <button type="button" class="knapp liten" onclick="kopier('lenke-alle', this)">Kopier</button>
+        </div>
+    </div>
+
+    <div class="kort">
+        <h2>Hent din personlige lenke</h2>
+        <p class="forklaring">Velg navnet ditt, så får du en lenke som kun viser møtene <em>du</em> er satt opp på.</p>
+
+        <% if (personer.length === 0) { %>
+            <p class="hjelpetekst">Ingen personer er registrert ennå. Be en administrator legge deg til i Personer-oversikten.</p>
+        <% } else { %>
+            <label for="person-valg">Ditt navn</label>
+            <select id="person-valg" onchange="oppdaterPersonligLenke()">
+                <option value="">Velg navn …</option>
+                <% personer.forEach(function(p) { %>
+                    <option value="<%= p.id %>" <%= p.id === forhandsvalgtId ? 'selected' : '' %>><%= p.navn %></option>
+                <% }); %>
+            </select>
+
+            <div id="personlig-resultat" style="display:none; margin-top:1.1rem;">
+                <a href="#" id="personlig-webcal" class="knapp lampe utvidet">Abonner på mine møter</a>
+                <div class="lenke-boks">
+                    <input type="text" readonly id="lenke-personlig">
+                    <button type="button" class="knapp liten" onclick="kopier('lenke-personlig', this)">Kopier</button>
+                </div>
+            </div>
+        <% } %>
+    </div>
+
+    <div class="kort">
+        <h2>Kommende møter</h2>
+        <% if (moter.length === 0) { %>
+            <div class="tom-tilstand">Ingen kommende møter er lagt inn ennå.</div>
+        <% } else { %>
+            <ul class="mote-liste">
+                <% moter.forEach(function(m) { %>
+                    <% const perRolle = {}; m.tildelinger.forEach(t => { (perRolle[t.roleId] = perRolle[t.roleId] || []).push(t.personId); }); %>
+                    <li class="mote-rad">
+                        <div style="width:100%;">
+                            <div class="mote-dato"><%= formaterDato(m.dato) %>
+                                <span class="mote-tid"><%= m.tid %></span>
+                            </div>
+                            <div class="mote-teknikere">
+                                <% if (Object.keys(perRolle).length === 0) { %>
+                                    <span class="tom">Ingen roller bemannet ennå</span>
+                                <% } else { %>
+                                    <% roller.forEach(function(rolle) { %>
+                                        <% if (!perRolle[rolle.id]) return; %>
+                                        <% const navnListe = perRolle[rolle.id].map(pid => { const p = personer.find(x => x.id === pid); return p ? p.navn : 'ikke satt'; }); %>
+                                        <span class="tag"><%= rolle.navn %>: <%= navnListe.join(', ') %></span>
+                                    <% }); %>
+                                <% } %>
+                            </div>
+                            <% if (m.kjoreplan.length > 0) { %>
+                                <details class="instruks" style="margin-top:0.5rem;">
+                                    <summary>Se møteplan (<%= m.kjoreplan.length %> punkt<%= m.kjoreplan.length === 1 ? '' : 'er' %>)</summary>
+                                    <ol>
+                                        <% m.kjoreplan.forEach(function(punkt) { %>
+                                            <li><strong><%= kjoreplanTypeNavn(punkt.type) %>:</strong> <%= punkt.tittel %><%= punkt.notat ? ' — ' + punkt.notat : '' %></li>
+                                        <% }); %>
+                                    </ol>
+                                </details>
+                            <% } %>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } %>
+
+        <details class="instruks">
+            <summary>Slik abonnerer du manuelt</summary>
+            <ol>
+                <li><strong>Google Kalender:</strong> Åpne kalender.google.com på PC → «Legg til annen kalender» → «Fra URL» → lim inn https-lenken.</li>
+                <li><strong>Apple Kalender (iPhone/Mac):</strong> Trykk på webcal-knappen, eller gå til Innstillinger → Kalender → Kontoer → Legg til abonnementskalender → lim inn lenken.</li>
+                <li><strong>Outlook:</strong> Legg til kalender → Abonner fra internett → lim inn https-lenken.</li>
+            </ol>
+        </details>
+    </div>
+
+    <p class="bunntekst"><a href="/admin">Admin</a> · Teknikerkalender</p>
+</div>
+
+<script>
+const base = <%- JSON.stringify(baseUrl) %>;
+const nokkel = <%- JSON.stringify(feedNokkel) %>;
+
+function kopier(feltId, knapp) {
+    const felt = document.getElementById(feltId);
+    felt.select();
+    felt.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(felt.value).then(() => {
+        const gammel = knapp.textContent;
+        knapp.textContent = 'Kopiert!';
+        setTimeout(() => { knapp.textContent = gammel; }, 1500);
+    }).catch(() => { document.execCommand('copy'); });
+}
+
+function oppdaterPersonligLenke() {
+    const id = document.getElementById('person-valg').value;
+    const resultat = document.getElementById('personlig-resultat');
+    if (!id) { resultat.style.display = 'none'; return; }
+    const httpsLenke = base + '/feed.ics?type=person&person=' + encodeURIComponent(id) + '&nokkel=' + encodeURIComponent(nokkel);
+    const webcalLenke = httpsLenke.replace(/^https?:\/\//, 'webcal://');
+    document.getElementById('lenke-personlig').value = httpsLenke;
+    document.getElementById('personlig-webcal').href = webcalLenke;
+    resultat.style.display = 'block';
+}
+
+if (document.getElementById('person-valg') && document.getElementById('person-valg').value) {
+    oppdaterPersonligLenke();
+}
+</script>
+</body>
+</html>

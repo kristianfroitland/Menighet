@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<%- include('partials/head', { tittel: 'Styring – ' + config.siteNavn }) %>
+</head>
+<body>
+<div class="side">
+
+    <div class="topplinje">
+        <div class="topp"><span class="cue-light"></span><h1>Styring</h1></div>
+        <a href="/logout?til=admin" class="knapp liten faresone">Logg ut</a>
+    </div>
+    <p class="undertekst"><a href="/mote/<%= mote.id %>/rediger">← Til møteredigering</a></p>
+    <p class="mote-dato" style="margin-bottom:1.25rem;"><%= formaterDato(mote.dato) %> <span class="mote-tid"><%= mote.tid %></span></p>
+
+    <% if (mote.kjoreplan.length === 0) { %>
+        <div class="kort">
+            <div class="tom-tilstand">Ingen punkter i møteplanen ennå. <a href="/mote/<%= mote.id %>/rediger">Legg til punkter først</a>.</div>
+        </div>
+    <% } else { %>
+        <div class="kort styring-hurtigknapper">
+            <form method="post" action="/mote/<%= mote.id %>/styring/handling" style="margin:0;">
+                <input type="hidden" name="handling" value="forrige">
+                <input type="hidden" name="csrf" value="<%= csrf %>">
+                <button type="submit" class="knapp stor">← Forrige</button>
+            </form>
+            <form method="post" action="/mote/<%= mote.id %>/styring/handling" style="margin:0;">
+                <input type="hidden" name="handling" value="neste">
+                <input type="hidden" name="csrf" value="<%= csrf %>">
+                <button type="submit" class="knapp lampe stor">Neste →</button>
+            </form>
+        </div>
+
+        <div class="kort">
+            <ul class="styring-liste">
+                <% mote.kjoreplan.forEach(function(punkt) { %>
+                    <% const aktiv = punkt.id === mote.aktivtPunktId; %>
+                    <li>
+                        <form method="post" action="/mote/<%= mote.id %>/styring/handling" style="margin:0;">
+                            <input type="hidden" name="handling" value="sett-aktiv">
+                            <input type="hidden" name="csrf" value="<%= csrf %>">
+                            <input type="hidden" name="punktId" value="<%= punkt.id %>">
+                            <button type="submit" class="styring-punkt <%= aktiv ? 'aktiv' : '' %>">
+                                <% if (aktiv) { %><span class="styring-live-prikk"></span><% } %>
+                                <span class="tag" style="margin:0 0.6rem 0 0;"><%= kjoreplanTypeNavn(punkt.type) %></span>
+                                <%= punkt.tittel %>
+                            </button>
+                        </form>
+                    </li>
+                <% }); %>
+            </ul>
+        </div>
+
+        <% if (mote.aktivtPunktId !== null) { %>
+            <form method="post" action="/mote/<%= mote.id %>/styring/handling">
+                <input type="hidden" name="handling" value="stopp">
+                <input type="hidden" name="csrf" value="<%= csrf %>">
+                <button type="submit" class="knapp liten" style="background:transparent; color:var(--tekst-lys); border:1px solid var(--stein);">Stopp visning (ingen aktivt punkt)</button>
+            </form>
+        <% } %>
+    <% } %>
+
+    <div class="kort" style="margin-top:1.5rem;">
+        <h2>Live-visning å dele</h2>
+        <p class="forklaring">Åpne denne lenken på en skjerm i lobbyen, bak scenen, eller del den med teamet — den oppdaterer seg selv umiddelbart når du trykker et punkt over. Ingen innlogging kreves for å se den.</p>
+        <a href="<%= liveUrl %>" target="_blank" class="knapp lampe utvidet">Åpne live-visning</a>
+        <div class="lenke-boks">
+            <input type="text" readonly value="<%= liveUrl %>" id="lenke-live">
+            <button type="button" class="knapp liten" onclick="kopier('lenke-live', this)">Kopier</button>
+        </div>
+    </div>
+
+<p class="bunntekst">Teknikerkalender · <%= config.siteNavn %></p>
+</div>
+<script>
+function kopier(feltId, knapp) {
+    const felt = document.getElementById(feltId);
+    felt.select();
+    felt.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(felt.value).then(() => {
+        const gammel = knapp.textContent;
+        knapp.textContent = 'Kopiert!';
+        setTimeout(() => { knapp.textContent = gammel; }, 1500);
+    });
+}
+</script>
+</body>
+</html>

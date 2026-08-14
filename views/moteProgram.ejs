@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Program – <%= formaterDato(mote.dato) %></title>
+<link rel="stylesheet" href="/style.css">
+<style>
+    .program-verktoylinje { max-width: 640px; margin: 0 auto; padding: 1.25rem 1.25rem 0; }
+    .program-side { max-width: 640px; margin: 0 auto; padding: 1.5rem 1.25rem 4rem; font-family: var(--skrift-body); color: var(--tekst); }
+    .program-header { text-align: center; margin-bottom: 2.25rem; padding-bottom: 1.5rem; border-bottom: 2px solid var(--grantre); }
+    .program-header .eyebrow { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--tekst-lys); }
+    .program-header h1 { font-family: var(--skrift-display); font-size: 2rem; color: var(--grantre); margin: 0.35rem 0 0.15rem; }
+    .program-header .tid { color: var(--tekst-lys); font-size: 1rem; }
+    .program-seksjon { margin-bottom: 2rem; }
+    .program-seksjon h2 { font-family: var(--skrift-display); font-size: 1.05rem; color: var(--grantre); border-bottom: 1px solid var(--stein); padding-bottom: 0.4rem; margin: 0 0 0.9rem; }
+    .medvirkende-liste { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem 1.5rem; list-style: none; padding: 0; margin: 0; }
+    .medvirkende-liste li { font-size: 0.94rem; }
+    .medvirkende-liste .rolle-navn { color: var(--tekst-lys); font-size: 0.82rem; display: block; }
+    .program-liste { list-style: none; padding: 0; margin: 0; counter-reset: punkt; }
+    .program-punkt { display: flex; gap: 1rem; padding: 0.85rem 0; border-bottom: 1px solid var(--papir-mork); break-inside: avoid; }
+    .program-punkt:last-child { border-bottom: none; }
+    .program-punkt-nr { counter-increment: punkt; font-family: var(--skrift-display); font-weight: 700; color: var(--lampe); font-size: 1.1rem; flex: none; width: 1.75rem; }
+    .program-punkt-nr::before { content: counter(punkt); }
+    .program-punkt-tittel { font-weight: 600; }
+    .program-punkt-type { font-size: 0.76rem; color: var(--tekst-lys); text-transform: uppercase; letter-spacing: 0.04em; }
+    .program-punkt-notat { font-size: 0.86rem; color: var(--tekst-lys); margin-top: 0.15rem; font-style: italic; }
+    @media print {
+        .skjul-ved-utskrift { display: none !important; }
+        body { background: #fff !important; }
+        .program-side { padding: 0; max-width: none; }
+        a { color: inherit !important; text-decoration: none !important; }
+    }
+</style>
+</head>
+<body>
+<% if (!forUtskrift) { %>
+<div class="program-verktoylinje skjul-ved-utskrift">
+    <p class="undertekst"><a href="/mote/<%= mote.id %>/rediger">← Til møteredigering</a></p>
+    <a href="/mote/<%= mote.id %>/program.pdf" class="knapp lampe">Last ned som PDF</a>
+    <button type="button" class="knapp" style="margin-left:0.5rem; background:transparent; color:var(--grantre); border:1px solid var(--stein);" onclick="window.print()">Skriv ut</button>
+    <p class="hjelpetekst">«Last ned som PDF» genererer filen direkte på serveren (samme utseende, ferdig til å sende videre).</p>
+</div>
+<% } %>
+
+<div class="program-side">
+    <div class="program-header">
+        <div class="eyebrow"><%= config.siteNavn %></div>
+        <h1><%= formaterDato(mote.dato) %></h1>
+        <div class="tid"><%= mote.tid %><%= mote.notat ? ' · ' + mote.notat : '' %></div>
+    </div>
+
+    <% const perRolle = {}; mote.tildelinger.forEach(t => { (perRolle[t.roleId] = perRolle[t.roleId] || []).push(t.personId); }); %>
+    <% if (Object.keys(perRolle).length > 0) { %>
+        <div class="program-seksjon">
+            <h2>Medvirkende</h2>
+            <ul class="medvirkende-liste">
+                <% roller.forEach(function(rolle) { %>
+                    <% if (!perRolle[rolle.id]) return; %>
+                    <% const navnListe = perRolle[rolle.id].map(pid => { const p = finnPerson(personer, pid); return p ? p.navn : 'Ikke satt'; }); %>
+                    <li>
+                        <span class="rolle-navn"><%= rolle.navn %></span>
+                        <%= navnListe.join(', ') %>
+                    </li>
+                <% }); %>
+            </ul>
+        </div>
+    <% } %>
+
+    <div class="program-seksjon">
+        <h2>Program</h2>
+        <% if (mote.kjoreplan.length === 0) { %>
+            <p class="hjelpetekst">Ingen punkter lagt til ennå.</p>
+        <% } else { %>
+            <ul class="program-liste">
+                <% mote.kjoreplan.forEach(function(punkt) { %>
+                    <li class="program-punkt">
+                        <span class="program-punkt-nr"></span>
+                        <div>
+                            <span class="program-punkt-type"><%= kjoreplanTypeNavn(punkt.type) %></span>
+                            <div class="program-punkt-tittel"><%= punkt.tittel %></div>
+                            <% if (punkt.notat) { %>
+                                <div class="program-punkt-notat"><%= punkt.notat %></div>
+                            <% } %>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } %>
+    </div>
+</div>
+</body>
+</html>

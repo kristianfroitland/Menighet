@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<%- include('partials/head', { tittel: 'Roller – ' + config.siteNavn }) %>
+</head>
+<body>
+<div class="side">
+
+    <div class="topplinje">
+        <div class="topp"><span class="cue-light"></span><h1>Admin</h1></div>
+        <a href="/logout?til=admin" class="knapp liten faresone">Logg ut</a>
+    </div>
+    <p class="undertekst"><a href="/">← Til den offentlige siden</a></p>
+
+    <%- include('partials/adminNav') %>
+
+    <div class="kort">
+        <h2><%= redigerRolle ? 'Rediger rolle' : 'Legg til ny rolle' %></h2>
+        <p class="forklaring">Roller er de ulike oppgavene folk kan settes opp til på et møte — f.eks. Lyd, Lys, Tekst/ProPresenter, Vert, Forsanger.</p>
+        <form method="post" action="/admin-roller/lagre">
+            <input type="hidden" name="csrf" value="<%= csrf %>">
+            <input type="hidden" name="id" value="<%= redigerRolle ? redigerRolle.id : '' %>">
+            <label for="navn">Navn på rolle</label>
+            <input type="text" id="navn" name="navn" required placeholder="F.eks. Lyd" value="<%= redigerRolle ? redigerRolle.navn : '' %>">
+            <button type="submit" class="knapp utvidet" style="margin-top:1.25rem;"><%= redigerRolle ? 'Lagre endringer' : 'Legg til rolle' %></button>
+            <% if (redigerRolle) { %>
+                <a href="/admin-roller" class="knapp liten" style="margin-top:0.75rem; background:transparent; color:var(--tekst-lys); border:1px solid var(--stein);">Avbryt</a>
+            <% } %>
+        </form>
+    </div>
+
+    <div class="kort">
+        <h2>Alle roller</h2>
+        <% if (roller.length === 0) { %>
+            <div class="tom-tilstand">Ingen roller lagt inn ennå.</div>
+        <% } else { %>
+            <ul class="mote-liste">
+                <% roller.forEach(function(r, i) { %>
+                    <li class="mote-rad">
+                        <div class="mote-dato"><%= r.navn %></div>
+                        <div class="rad-knapper">
+                            <form method="post" action="/admin-roller/flytt" style="margin:0;">
+                                <input type="hidden" name="csrf" value="<%= csrf %>">
+                                <input type="hidden" name="id" value="<%= r.id %>">
+                                <input type="hidden" name="retning" value="opp">
+                                <button type="submit" class="knapp liten" <%= i === 0 ? 'disabled' : '' %>>↑</button>
+                            </form>
+                            <form method="post" action="/admin-roller/flytt" style="margin:0;">
+                                <input type="hidden" name="csrf" value="<%= csrf %>">
+                                <input type="hidden" name="id" value="<%= r.id %>">
+                                <input type="hidden" name="retning" value="ned">
+                                <button type="submit" class="knapp liten" <%= i === roller.length - 1 ? 'disabled' : '' %>>↓</button>
+                            </form>
+                            <a href="/admin-roller?rediger=<%= encodeURIComponent(r.id) %>" class="knapp liten">Rediger</a>
+                            <form method="post" action="/admin-roller/slett" onsubmit="return confirm('Slette denne rollen? Den fjernes også fra alle møter den er brukt på.');" style="margin:0;">
+                                <input type="hidden" name="csrf" value="<%= csrf %>">
+                                <input type="hidden" name="id" value="<%= r.id %>">
+                                <button type="submit" class="knapp liten faresone">Slett</button>
+                            </form>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } %>
+    </div>
+
+<p class="bunntekst">Teknikerkalender · <%= config.siteNavn %></p>
+</div>
+</body>
+</html>

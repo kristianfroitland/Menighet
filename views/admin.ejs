@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<%- include('partials/head', { tittel: 'Admin – ' + config.siteNavn }) %>
+</head>
+<body>
+<div class="side">
+
+    <div class="topplinje">
+        <div class="topp"><span class="cue-light"></span><h1>Admin</h1></div>
+        <a href="/logout?til=admin" class="knapp liten faresone">Logg ut</a>
+    </div>
+    <p class="undertekst"><a href="/">← Til den offentlige siden</a></p>
+    <% if (session.innloggetEpost) { %>
+        <p class="innlogget-som">Innlogget som <%= session.innloggetNavn || session.innloggetEpost %> (<%= session.innloggetEpost %>)</p>
+    <% } %>
+
+    <%- include('partials/adminNav') %>
+
+    <div class="kort">
+        <h2>Legg til nytt møte</h2>
+        <form method="post" action="/admin/nytt-mote">
+            <input type="hidden" name="csrf" value="<%= csrf %>">
+            <label for="dato">Dato</label>
+            <input type="date" id="dato" name="dato" required>
+            <label for="tid">Klokkeslett</label>
+            <input type="time" id="tid" name="tid" required value="11:00">
+            <label for="notat">Notat (valgfritt)</label>
+            <input type="text" id="notat" name="notat" placeholder="F.eks. nattverd, dåp, spesielt utstyr">
+            <button type="submit" class="knapp utvidet" style="margin-top:1.25rem;">Legg til møte</button>
+            <p class="hjelpetekst">Du velger hvem som har hvilken rolle, og bygger møteplanen, på neste side.</p>
+        </form>
+    </div>
+
+    <div class="kort">
+        <h2>Kommende og tidligere møter</h2>
+        <% if (moter.length === 0) { %>
+            <div class="tom-tilstand">Ingen møter lagt inn ennå.</div>
+        <% } else if (roller.length === 0) { %>
+            <div class="melding feil">Du har ingen roller enda — <a href="/admin-roller">legg til roller</a> først, så kan du sette opp bemanning per møte.</div>
+        <% } else { %>
+            <ul class="mote-liste">
+                <% moter.forEach(function(m) { %>
+                    <% const perRolle = {}; m.tildelinger.forEach(t => { (perRolle[t.roleId] = perRolle[t.roleId] || []).push(t.personId); }); %>
+                    <li class="mote-rad">
+                        <div>
+                            <div class="mote-dato"><%= formaterDato(m.dato) %>
+                                <span class="mote-tid"><%= m.tid %></span>
+                            </div>
+                            <div class="mote-teknikere">
+                                <% if (Object.keys(perRolle).length === 0) { %>
+                                    <span class="tom">Ingen roller bemannet ennå</span>
+                                <% } else { %>
+                                    <% roller.forEach(function(rolle) { %>
+                                        <% if (!perRolle[rolle.id]) return; %>
+                                        <% const navnListe = perRolle[rolle.id].map(pid => { const p = personer.find(x => x.id === pid); return p ? p.navn : 'ikke satt'; }); %>
+                                        <span class="tag"><%= rolle.navn %>: <%= navnListe.join(', ') %></span>
+                                    <% }); %>
+                                <% } %>
+                            </div>
+                            <% if (m.kjoreplan.length > 0) { %>
+                                <div class="hjelpetekst" style="margin-top:0.3rem;"><%= m.kjoreplan.length %> punkt(er) i møteplanen</div>
+                            <% } %>
+                            <% if (m.notat) { %>
+                                <div class="hjelpetekst" style="margin-top:0.2rem;"><%= m.notat %></div>
+                            <% } %>
+                        </div>
+                        <div class="rad-knapper">
+                            <a href="/mote/<%= m.id %>/rediger" class="knapp liten">Rediger</a>
+                            <form method="post" action="/admin/slett-mote" onsubmit="return confirm('Slette dette møtet?');" style="margin:0;">
+                                <input type="hidden" name="csrf" value="<%= csrf %>">
+                                <input type="hidden" name="id" value="<%= m.id %>">
+                                <button type="submit" class="knapp liten faresone">Slett</button>
+                            </form>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } %>
+    </div>
+
+<p class="bunntekst">Teknikerkalender · <%= config.siteNavn %></p>
+</div>
+</body>
+</html>

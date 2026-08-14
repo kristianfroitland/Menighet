@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<%- include('partials/head', { tittel: 'Rediger møte – ' + config.siteNavn }) %>
+</head>
+<body>
+<div class="side">
+
+    <div class="topplinje">
+        <div class="topp"><span class="cue-light"></span><h1>Admin</h1></div>
+        <a href="/logout?til=admin" class="knapp liten faresone">Logg ut</a>
+    </div>
+    <p class="undertekst"><a href="/admin">← Til møtelisten</a></p>
+
+    <div class="admin-nav" style="border-bottom:none; margin-bottom:1.25rem;">
+        <a href="/mote/<%= mote.id %>/styring" class="admin-nav-lenke" style="border:1px solid var(--stein); border-radius:8px; margin-right:0.4rem;">Live styring</a>
+        <a href="/mote/<%= mote.id %>/program" class="admin-nav-lenke" style="border:1px solid var(--stein); border-radius:8px;" target="_blank">Program (skriv ut/PDF)</a>
+    </div>
+
+    <div class="kort">
+        <h2><%= formaterDato(mote.dato) %> <span class="mote-tid"><%= mote.tid %></span></h2>
+        <form method="post" action="/mote/<%= mote.id %>/oppdater-detaljer">
+            <input type="hidden" name="csrf" value="<%= csrf %>">
+            <label for="dato">Dato</label>
+            <input type="date" id="dato" name="dato" required value="<%= mote.dato %>">
+            <label for="tid">Klokkeslett</label>
+            <input type="time" id="tid" name="tid" required value="<%= mote.tid %>">
+            <label for="notat">Notat</label>
+            <input type="text" id="notat" name="notat" value="<%= mote.notat %>">
+            <button type="submit" class="knapp liten" style="margin-top:0.9rem;">Lagre detaljer</button>
+        </form>
+    </div>
+
+    <div class="kort">
+        <h2>Bemanning</h2>
+        <% if (roller.length === 0) { %>
+            <p class="hjelpetekst"><a href="/admin-roller">Legg til roller</a> først.</p>
+        <% } else { %>
+            <% roller.forEach(function(rolle) { %>
+                <div class="rolle-blokk">
+                    <div class="rolle-blokk-tittel"><%= rolle.navn %></div>
+                    <div class="rolle-tildelinger">
+                        <% mote.tildelinger.forEach(function(t, i) { %>
+                            <% if (t.roleId !== rolle.id) return; %>
+                            <% const p = finnPerson(personer, t.personId); %>
+                            <span class="tag tildeling-tag">
+                                <%= p ? p.navn : 'Ikke satt' %>
+                                <form method="post" action="/mote/<%= mote.id %>/fjern-tildeling" style="display:inline; margin:0;">
+                                    <input type="hidden" name="csrf" value="<%= csrf %>">
+                                    <input type="hidden" name="indeks" value="<%= i %>">
+                                    <button type="submit" class="fjern-knapp" title="Fjern" onclick="return confirm('Fjerne denne bemanningen?');">×</button>
+                                </form>
+                            </span>
+                        <% }); %>
+                    </div>
+                    <form method="post" action="/mote/<%= mote.id %>/legg-til-tildeling" class="legg-til-tildeling-form">
+                        <input type="hidden" name="csrf" value="<%= csrf %>">
+                        <input type="hidden" name="roleId" value="<%= rolle.id %>">
+                        <select name="personId">
+                            <option value="">— Ikke satt (planlegg rollen) —</option>
+                            <% personer.forEach(function(p) { %>
+                                <option value="<%= p.id %>"><%= p.navn %></option>
+                            <% }); %>
+                        </select>
+                        <button type="submit" class="knapp liten">Legg til</button>
+                    </form>
+                </div>
+            <% }); %>
+            <% if (personer.length === 0) { %>
+                <p class="hjelpetekst" style="margin-top:0.75rem;"><a href="/admin-personer">Legg til personer</a> for å kunne velge dem her — du kan fortsatt markere en rolle som "ikke satt" i mellomtiden.</p>
+            <% } %>
+        <% } %>
+    </div>
+
+    <div class="kort">
+        <h2>Møteplan</h2>
+        <p class="forklaring">Rekkefølgen på møtet — sanger, tale, bønn og annet.</p>
+        <% if (mote.kjoreplan.length === 0) { %>
+            <div class="tom-tilstand">Ingen punkter lagt til ennå.</div>
+        <% } else { %>
+            <ul class="mote-liste">
+                <% mote.kjoreplan.forEach(function(punkt, i) { %>
+                    <li class="mote-rad">
+                        <div>
+                            <span class="tag"><%= kjoreplanTypeNavn(punkt.type) %></span>
+                            <div class="mote-dato" style="margin-top:0.3rem;"><%= punkt.tittel %></div>
+                            <% if (punkt.notat) { %>
+                                <div class="hjelpetekst"><%= punkt.notat %></div>
+                            <% } %>
+                        </div>
+                        <div class="rad-knapper">
+                            <form method="post" action="/mote/<%= mote.id %>/flytt-punkt" style="margin:0;">
+                                <input type="hidden" name="csrf" value="<%= csrf %>">
+                                <input type="hidden" name="punktId" value="<%= punkt.id %>">
+                                <input type="hidden" name="retning" value="opp">
+                                <button type="submit" class="knapp liten" <%= i === 0 ? 'disabled' : '' %>>↑</button>
+                            </form>
+                            <form method="post" action="/mote/<%= mote.id %>/flytt-punkt" style="margin:0;">
+                                <input type="hidden" name="csrf" value="<%= csrf %>">
+                                <input type="hidden" name="punktId" value="<%= punkt.id %>">
+                                <input type="hidden" name="retning" value="ned">
+                                <button type="submit" class="knapp liten" <%= i === mote.kjoreplan.length - 1 ? 'disabled' : '' %>>↓</button>
+                            </form>
+                            <form method="post" action="/mote/<%= mote.id %>/slett-punkt" style="margin:0;">
+                                <input type="hidden" name="csrf" value="<%= csrf %>">
+                                <input type="hidden" name="punktId" value="<%= punkt.id %>">
+                                <button type="submit" class="knapp liten faresone">Slett</button>
+                            </form>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } %>
+
+        <form method="post" action="/mote/<%= mote.id %>/legg-til-punkt" style="margin-top:1.25rem; border-top:1px solid var(--papir-mork); padding-top:1.1rem;">
+            <input type="hidden" name="csrf" value="<%= csrf %>">
+            <label for="tittel">Nytt punkt</label>
+            <input type="text" id="tittel" name="tittel" placeholder="F.eks. Great Are You Lord, eller Velkommen">
+            <label for="type">Type</label>
+            <select id="type" name="type">
+                <option value="sang">Sang</option>
+                <option value="tale">Tale</option>
+                <option value="bonn">Bønn</option>
+                <option value="nadverd">Nattverd</option>
+                <option value="pause">Pause</option>
+                <option value="annonsering">Annonsering</option>
+                <option value="annet" selected>Annet</option>
+            </select>
+            <label for="punktNotat">Notat (valgfritt)</label>
+            <input type="text" id="punktNotat" name="punktNotat" placeholder="F.eks. toneart, hvem som leder">
+            <button type="submit" class="knapp utvidet" style="margin-top:1.1rem;">Legg til punkt</button>
+        </form>
+    </div>
+
+<p class="bunntekst">Teknikerkalender · <%= config.siteNavn %></p>
+</div>
+</body>
+</html>

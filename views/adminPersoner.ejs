@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<%- include('partials/head', { tittel: 'Personer – ' + config.siteNavn }) %>
+</head>
+<body>
+<div class="side">
+
+    <div class="topplinje">
+        <div class="topp"><span class="cue-light"></span><h1>Admin</h1></div>
+        <a href="/logout?til=admin" class="knapp liten faresone">Logg ut</a>
+    </div>
+    <p class="undertekst"><a href="/">← Til den offentlige siden</a></p>
+
+    <%- include('partials/adminNav') %>
+
+    <div class="kort">
+        <h2><%= redigerPerson ? 'Rediger person' : 'Legg til ny person' %></h2>
+        <p class="forklaring">Frivillig-oversikten din. E-post brukes også til å kjenne igjen personen automatisk hvis dere har skrudd på innlogging med Google/Microsoft.</p>
+        <form method="post" action="/admin-personer/lagre">
+            <input type="hidden" name="csrf" value="<%= csrf %>">
+            <input type="hidden" name="id" value="<%= redigerPerson ? redigerPerson.id : '' %>">
+
+            <label for="navn">Navn</label>
+            <input type="text" id="navn" name="navn" required placeholder="F.eks. Kari Nordmann" value="<%= redigerPerson ? redigerPerson.navn : '' %>">
+
+            <label for="epost">E-post (valgfritt)</label>
+            <input type="text" id="epost" name="epost" placeholder="kari@epost.no" value="<%= redigerPerson ? redigerPerson.epost : '' %>">
+
+            <label for="telefon">Telefon (valgfritt)</label>
+            <input type="text" id="telefon" name="telefon" placeholder="F.eks. 400 00 000" value="<%= redigerPerson ? redigerPerson.telefon : '' %>">
+
+            <% if (roller.length > 0) { %>
+                <label>Hvilke roller kan denne personen fylle?</label>
+                <div class="sjekkboks-gruppe">
+                    <% roller.forEach(function(r) { %>
+                        <label class="sjekkboks-rad">
+                            <input type="checkbox" name="roller" value="<%= r.id %>" <%= (redigerPerson && redigerPerson.rolleIder.includes(r.id)) ? 'checked' : '' %>>
+                            <%= r.navn %>
+                        </label>
+                    <% }); %>
+                </div>
+            <% } else { %>
+                <p class="hjelpetekst"><a href="/admin-roller">Legg til roller</a> først, så kan du krysse av hvilke denne personen kan fylle.</p>
+            <% } %>
+
+            <label for="notat">Notat (valgfritt)</label>
+            <input type="text" id="notat" name="notat" placeholder="F.eks. kan ikke tirsdager" value="<%= redigerPerson ? redigerPerson.notat : '' %>">
+
+            <button type="submit" class="knapp utvidet" style="margin-top:1.25rem;"><%= redigerPerson ? 'Lagre endringer' : 'Legg til person' %></button>
+            <% if (redigerPerson) { %>
+                <a href="/admin-personer" class="knapp liten" style="margin-top:0.75rem; background:transparent; color:var(--tekst-lys); border:1px solid var(--stein);">Avbryt</a>
+            <% } %>
+        </form>
+    </div>
+
+    <div class="kort">
+        <h2>Alle personer</h2>
+        <% if (personer.length === 0) { %>
+            <div class="tom-tilstand">Ingen personer lagt inn ennå.</div>
+        <% } else { %>
+            <ul class="mote-liste">
+                <% personer.forEach(function(p) { %>
+                    <li class="mote-rad">
+                        <div>
+                            <div class="mote-dato"><%= p.navn %></div>
+                            <% if (p.epost || p.telefon) { %>
+                                <div class="hjelpetekst"><%= [p.epost, p.telefon].filter(Boolean).join(' · ') %></div>
+                            <% } %>
+                            <div class="mote-teknikere">
+                                <% roller.forEach(function(r) { %>
+                                    <% if (p.rolleIder.includes(r.id)) { %>
+                                        <span class="tag"><%= r.navn %></span>
+                                    <% } %>
+                                <% }); %>
+                            </div>
+                        </div>
+                        <div class="rad-knapper">
+                            <a href="/admin-personer?rediger=<%= encodeURIComponent(p.id) %>" class="knapp liten">Rediger</a>
+                            <form method="post" action="/admin-personer/slett" onsubmit="return confirm('Slette denne personen? Fjernes også fra alle møter.');" style="margin:0;">
+                                <input type="hidden" name="csrf" value="<%= csrf %>">
+                                <input type="hidden" name="id" value="<%= p.id %>">
+                                <button type="submit" class="knapp liten faresone">Slett</button>
+                            </form>
+                        </div>
+                    </li>
+                <% }); %>
+            </ul>
+        <% } %>
+    </div>
+
+<p class="bunntekst">Teknikerkalender · <%= config.siteNavn %></p>
+</div>
+</body>
+</html>

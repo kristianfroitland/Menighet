@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<%- include('partials/head', { tittel: 'Nå: ' + config.siteNavn }) %>
+</head>
+<body class="live-bakgrunn">
+<div class="live-side">
+    <div class="live-topp">
+        <span class="cue-light"></span>
+        <span class="live-dato"><%= formaterDato(mote.dato) %></span>
+    </div>
+
+    <div id="live-innhold">
+        <p class="live-venter">Kobler til …</p>
+    </div>
+</div>
+
+<script>
+const wsPath = <%- JSON.stringify(wsUrl) %>;
+const innhold = document.getElementById('live-innhold');
+let sisteVisteTittel = null;
+let forsokTeller = 0;
+let socket = null;
+
+function typeIkon(type) {
+    const ikoner = { 'Sang': '♪', 'Tale': '🗣', 'Bønn': '🙏', 'Nattverd': '✝', 'Pause': '⏸', 'Annonsering': '📣', 'Annet': '•' };
+    return ikoner[type] || '•';
+}
+
+function escapeHtml(tekst) {
+    const div = document.createElement('div');
+    div.textContent = tekst;
+    return div.innerHTML;
+}
+
+function visStatus(data) {
+    if (data.feil) {
+        innhold.innerHTML = '<p class="live-venter">' + escapeHtml(data.feil) + '</p>';
+        return;
+    }
+    if (!data.aktivt) {
+        innhold.innerHTML = '<p class="live-venter">Venter på at møtet skal starte …</p>';
+        sisteVisteTittel = null;
+        return;
+    }
+    if (data.aktivt.tittel === sisteVisteTittel) return;
+    sisteVisteTittel = data.aktivt.tittel;
+
+    let html = '<div class="live-na-etikett">' + typeIkon(data.aktivt.type) + ' ' + escapeHtml(data.aktivt.type) + ' nå</div>';
+    html += '<div class="live-tittel">' + escapeHtml(data.aktivt.tittel) + '</div>';
+    if (data.aktivt.notat) {
+        html += '<div class="live-notat">' + escapeHtml(data.aktivt.notat) + '</div>';
+    }
+    if (data.neste) {
+        html += '<div class="live-neste">Neste: ' + escapeHtml(data.neste.tittel) + '</div>';
+    }
+    innhold.innerHTML = html;
+}
+
+function koble() {
+    const protokoll = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    socket = new WebSocket(protokoll + '//' + location.host + wsPath);
+
+    socket.addEventListener('open', () => { forsokTeller = 0; });
+
+    socket.addEventListener('message', (event) => {
+        try { visStatus(JSON.parse(event.data)); } catch (e) { /* ignorer korrupt melding */ }
+    });
+
+    socket.addEventListener('close', planleggReconnect);
+    socket.addEventListener('error', () => socket.close());
+}
+
+function planleggReconnect() {
+    forsokTeller++;
+    const ventetid = Math.min(1000 * Math.pow(1.5, forsokTeller), 15000);
+    setTimeout(koble, ventetid);
+}
+
+koble();
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "teknikerkalender",
+  "version": "1.0.0",
+  "description": "Vaktplan, møteplan og live-styring for møter/gudstjenester",
+  "private": true,
+  "type": "commonjs",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "generate-hash": "node scripts/generate-hash.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-session": "^2.1.0",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "puppeteer": "^22.15.0",
+    "ws": "^8.18.0"
+  }
+}

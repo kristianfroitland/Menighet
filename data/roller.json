@@ -1,0 +1,27 @@
+[
+    {
+        "id": "04c65369ac01",
+        "navn": "Lyd",
+        "rekkefolge": 1
+    },
+    {
+        "id": "ff862b9528dc",
+        "navn": "Lys",
+        "rekkefolge": 2
+    },
+    {
+        "id": "9fd90d3421ae",
+        "navn": "Tekst/ProPresenter",
+        "rekkefolge": 3
+    },
+    {
+        "id": "ee36aa5a5291",
+        "navn": "Vert",
+        "rekkefolge": 4
+    },
+    {
+        "id": "61fbed07b4ff",
+        "navn": "Forsanger",
+        "rekkefolge": 5
+    }
+]

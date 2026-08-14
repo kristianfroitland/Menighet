@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<%- include('partials/head', { tittel: 'Admin – ' + config.siteNavn }) %>
+</head>
+<body>
+<div class="side">
+    <div class="topp"><span class="cue-light"></span><h1>Admin</h1></div>
+    <p class="undertekst">Logg inn for å legge inn møter, roller og frivillige.</p>
+    <% if (feil) { %><div class="melding feil"><%= feil %></div><% } %>
+
+    <%- include('partials/ssoButtons') %>
+
+    <form method="post" action="/admin/logg-inn" class="kort">
+        <label for="passord">Passord</label>
+        <input type="password" id="passord" name="passord" required autofocus>
+        <button type="submit" class="knapp utvidet" style="margin-top:1.25rem;">Logg inn</button>
+    </form>
+</div>
+</body>
+</html>

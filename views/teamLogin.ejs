@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<%- include('partials/head') %>
+</head>
+<body>
+<div class="side">
+    <div class="topp"><span class="cue-light"></span><h1><%= config.siteNavn %></h1></div>
+    <p class="undertekst">Skriv inn teampassordet for å se møter og hente kalenderlenker.</p>
+    <% if (feil) { %><div class="melding feil"><%= feil %></div><% } %>
+
+    <%- include('partials/ssoButtons') %>
+
+    <form method="post" action="/" class="kort">
+        <label for="passord">Passord</label>
+        <input type="password" id="passord" name="passord" required autofocus>
+        <button type="submit" class="knapp utvidet" style="margin-top:1.25rem;">Vis møter</button>
+    </form>
+</div>
+</body>
+</html>

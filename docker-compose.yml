@@ -1,0 +1,80 @@
+# ============================================================
+#  docker-compose.yml for Coolify
+# ============================================================
+#  Slik ruller du ut:
+#  1. Push denne mappen til et git-repo (GitHub/GitLab/Gitea)
+#  2. I Coolify: "New Resource" -> "Docker Compose" -> pek på repoet
+#  3. Coolify finner denne filen automatisk og genererer passord,
+#     hemmelige nøkler og domene selv (se SERVICE_*-variablene under)
+#  4. Fyll KUN inn Google/Microsoft-feltene i Coolifys UI hvis dere
+#     skal bruke SSO — resten er klart til å trykke Deploy
+#
+#  Krever Coolify v4.0.0-beta.411 eller nyere for at magic-variabler
+#  skal fungere med "Docker Compose fra git" (stabil v4 dekker dette).
+#
+#  Alt env-innhold under kan overstyres i Coolifys "Environment
+#  Variables"-fane i etterkant uten å røre denne filen.
+# ============================================================
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+    environment:
+      # Domene: Coolify allokerer selv en adresse på wildcard-domenet
+      # ditt (eller du kan sette et eget domene i Coolifys UI etterpå)
+      - SERVICE_FQDN_APP_3000
+      - BASE_URL=${SERVICE_URL_APP}
+      - PORT=3000
+
+      # Innhold
+      - SITE_NAVN=${SITE_NAVN:-Teknikeransvar}
+      - SITE_UNDERTEKST=${SITE_UNDERTEKST:-Se hvilken søndag du har teknikeransvar på møte.}
+      - MOTE_VARIGHET_MIN=${MOTE_VARIGHET_MIN:-120}
+      - KALENDER_DOMENE=${KALENDER_DOMENE:-teknikerkalender.local}
+
+      # Økt-signering — Coolify genererer en lang tilfeldig verdi selv
+      - SESSION_SECRET=${SERVICE_BASE64_64_SESSION_SECRET}
+
+      # Innloggingspassord — Coolify genererer ekte, tilfeldige passord
+      # og viser dem i "Environment Variables"-fanen etter første deploy.
+      # Det er DER du henter passordene å gi til admin/teamet, ikke her.
+      - ADMIN_PASSORD=${SERVICE_PASSWORD_ADMIN}
+      - TEAM_PASSORD=${SERVICE_PASSWORD_TEAM}
+
+      # Hemmelige nøkler for kalenderfeed og live-visning (kan ikke bruke
+      # passord-innlogging, se README) — også auto-generert av Coolify
+      - FEED_NOKKEL=${SERVICE_BASE64_64_FEED_NOKKEL}
+      - LIVE_NOKKEL=${SERVICE_BASE64_64_LIVE_NOKKEL}
+
+      # SSO (valgfritt) — la stå tomt/false hvis dere ikke skal bruke det.
+      # Fyll inn i Coolifys UI, IKKE direkte i denne filen hvis den skal i git.
+      - GOOGLE_PALOGGET=${GOOGLE_PALOGGET:-false}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - MS_PALOGGET=${MS_PALOGGET:-false}
+      - MS_CLIENT_ID=${MS_CLIENT_ID:-}
+      - MS_CLIENT_SECRET=${MS_CLIENT_SECRET:-}
+      - MS_TENANT=${MS_TENANT:-common}
+      - TEAM_TILLATTE_EPOSTER=${TEAM_TILLATTE_EPOSTER:-}
+      - TEAM_TILLATTE_DOMENER=${TEAM_TILLATTE_DOMENER:-}
+      - ADMIN_TILLATTE_EPOSTER=${ADMIN_TILLATTE_EPOSTER:-}
+      - ADMIN_TILLATTE_DOMENER=${ADMIN_TILLATTE_DOMENER:-}
+
+    volumes:
+      # Navngitt volum — overlever omstarter OG nye utrullinger. Dette er
+      # "databasen" (meetings.json/roller.json/personer.json).
+      - teknikerkalender-data:/app/data
+
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  teknikerkalender-data:
